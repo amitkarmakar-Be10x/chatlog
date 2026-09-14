@@ -385,11 +385,18 @@ function parseAttendeeCSV(txt){
 /* ── SENTIMENT ANALYSIS ── */
 function parseChat(txt,src){
   var msgs=[],cur=null;
+  /* Supports both Zoom chat export formats:
+     1) "10:52:16 From Name to Recipient:"                (time only)
+     2) "2026-09-13 10:50:13 From Name to Recipient:"     (date + time) */
+  var re=/^(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{2}:\d{2}:\d{2})\s+From\s+(.+?)\s+to\s+(.+?):\s*$/;
   txt.split('\n').forEach(function(raw){
     var line=raw.replace(/\r$/,'');
-    var m=line.match(/^(\d{2}:\d{2}:\d{2}) From (.+?) to (.+?):\s*$/);
-    if(m){if(cur)msgs.push(cur);cur={ts:m[1],name:m[2].trim(),msg:'',source:src};}
-    else if(cur&&(line[0]==='\t'||line.slice(0,2)==='  '))cur.msg+=(cur.msg?' ':'')+line.replace(/^\s+/,'');
+    var m=line.match(re);
+    if(m){if(cur)msgs.push(cur);cur={date:m[1]||'',ts:m[2],name:m[3].trim(),msg:'',source:src};}
+    else if(cur&&(line[0]==='\t'||line.slice(0,2)==='  ')){
+      var cont=line.replace(/^\s+/,'');
+      if(cont)cur.msg+=(cur.msg?' ':'')+cont;
+    }
   });
   if(cur)msgs.push(cur);return msgs;
 }

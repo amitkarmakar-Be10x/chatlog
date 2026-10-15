@@ -133,6 +133,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .td.b{font-weight:600;color:var(--text);font-size:13px}.td.m{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}.td.c{color:var(--blue)}
 .td.src{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tag{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:600;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;white-space:nowrap}
+.tNEGATIVE{color:#ff4ecd;background:rgba(255,78,205,.12);border:1px solid rgba(255,78,205,.3);animation:negPulse 2s ease-in-out infinite}
+@keyframes negPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,78,205,0)}50%{box-shadow:0 0 6px 2px rgba(255,78,205,.18)}}
 .tCONTENT{color:var(--orange);background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.15)}
 .tRECORDING{color:var(--blue);background:rgba(96,192,250,.1);border:1px solid rgba(96,192,250,.15)}
 .tUPSELLING{color:var(--rose);background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15)}
@@ -298,13 +300,36 @@ var S={
 
 /* ── SENTIMENT ANALYSIS CONSTANTS ── */
 var HOSTS=['team be10x','aman saurav','prakhar bafna'];
-var CAT_RANK={FLAG_WORD:4,UPSELLING:3,CONTENT:2,RECORDING:1};
+var CAT_RANK={NEGATIVE:5,FLAG_WORD:4,UPSELLING:3,CONTENT:2,RECORDING:1};
 var SEV_RANK={HIGH:2,MEDIUM:1};
 var RULES=[
-  {cat:'FLAG_WORD',sev:'HIGH',pats:[/\bscam\b/i,/\bwaste\b/i,/\bfake\b/i,/\bfraud\b/i,/\bcheat\b/i],hi:[],reason:'Contains strong negative flag word'},
+  /* ── NEGATIVE / BAD — always HIGH ── */
+  {cat:'NEGATIVE',sev:'HIGH',
+   pats:[
+     /* frustration */
+     /\bfrustrat/i,/so frustrat/i,/very frustrat/i,/i('m| am) frustrat/i,
+     /* abuse / verbal aggression */
+     /\babuse[sd]?\b/i,/\babusing\b/i,/\bverbal abuse\b/i,
+     /* gaali / slang / swearing (Hindi + English) */
+     /\bgaali\b/i,/\bgali\b/i,/\bbc\b/i,/\bmc\b/i,/\bbhenchod/i,/\bmadarchod/i,/\bsala\b/i,/\bkamina\b/i,/\bbastard\b/i,/\basshole\b/i,/\bstupid\b/i,/\bidiot\b/i,/\bbloody hell\b/i,/\bdamn (you|this)\b/i,/\bshut up\b/i,/\bgo to hell\b/i,
+     /* fraud */
+     /\bfraud\b/i,/\bfraudster\b/i,/\bthis is fraud\b/i,/\bcheating us\b/i,
+     /* scam */
+     /\bscam\b/i,/\bscammer\b/i,/\bpyramid scheme\b/i,/\bponzi\b/i,
+     /* dissatisfaction */
+     /\bdissatisf/i,/totally dissatisf/i,/completely dissatisf/i,/very dissatisf/i,
+     /* ignored */
+     /\bignored\b/i,/\bbeing ignored\b/i,/no one is (responding|helping|answering)/i,/nobody (respond|help|answer)/i,/not (responding|answering) (to me|my)/i,/my (question|message|query|doubt) (was |is )?ignored/i,
+     /* overpriced */
+     /\boverpriced\b/i,/\btoo expensive\b/i,/\bway too costly\b/i,/\bnot worth the (price|money|cost|fee|amount)\b/i,/\bover(charged|priced)\b/i,/\bripoff\b/i,/\brip.?off\b/i,/\bextortion\b/i,/\bdaylight robbery\b/i,/charged (too much|extra|wrong)/i,/price is (too high|ridiculous|insane|unfair)/i
+   ],
+   hi:[/fraud/i,/scam/i,/abuse/i,/gaali/i,/gali/i,/bastard/i,/asshole/i,/idiot/i,/stupid/i,/madarchod/i,/bhenchod/i,/overpriced/i,/rip.?off/i,/dissatisf/i,/ignored/i],
+   reason:'Negative/Bad sentiment — frustration, abuse, slang, fraud, scam, dissatisfaction, ignored or overpriced'},
+  /* ── EXISTING RULES ── */
+  {cat:'FLAG_WORD',sev:'HIGH',pats:[/\bwaste\b/i,/\bfake\b/i,/\bcheat\b/i],hi:[],reason:'Contains strong negative flag word'},
   {cat:'UPSELLING',pats:[/just promoting/i,/only promoting/i,/just promotion/i,/its just promotion/i,/stop\s*(this\s*)?marketing/i,/stop\s*and\s*start teaching/i,/start teaching/i,/wasting\s*(our\s*)?time/i,/waste of time/i,/half an hour.*prais/i,/praising.*self/i,/prais.*urself/i,/past.{0,20}hour.*promot/i,/we.*not paid for this/i,/not paid for this/i,/stop.*(success stories|testimonials)/i,/for the past.*promot/i,/more than half.*prais/i,/just praising/i],hi:[/stop.*marketing/i,/wasting.*time/i,/not paid/i,/praising/i,/past.*hour/i,/start teaching/i],reason:'Complaint about excessive course promotion or upselling'},
   {cat:'RECORDING',pats:[/can\s*(i|we)\s*get\s*(the\s*)?recording/i,/will.{0,20}(get|have|receive).{0,20}recording/i,/share\s*(this\s*)?recording/i,/pls\s*share.*recording/i,/please\s*share.*recording/i,/is.{0,15}recorded/i,/will.{0,20}be\s*recorded/i,/recording.{0,10}(session|provided)/i,/also\s*can\s*we\s*get.*recording/i,/lecture.{0,20}recording/i,/missed.{0,30}(session|class)/i],hi:[],reason:'Requested session recording or asked if session is recorded'},
-  {cat:'CONTENT',pats:[/useless/i,/not\s*(happy|satisfied)\s*with/i,/not\s*(helpful|useful)/i,/not really.{0,20}helpful/i,/i\s*(quit|am leaving)/i,/already know/i,/we know this/i,/we already know/i,/too basic/i,/very basic/i,/nothing new/i,/not.*relevant.*to me/i,/not even relevant/i,/courses are not.*relevant/i,/needs?\s*more\s*detail/i,/more detailed/i,/things have to be more/i,/what is the actual catch/i,/not practical/i,/not practical/i,/feels like compromising/i,/compromising personal data/i,/not worth/i,/pathetic/i,/terrible/i,/so boring/i,/waste.{0,12}(this|session|workshop)/i],hi:[/useless/i,/i quit/i,/not happy/i,/not relevant/i,/nothing new/i,/already know/i,/pathetic/i,/not worth/i,/terrible/i],reason:'Dissatisfied with workshop content quality or relevance'}
+  {cat:'CONTENT',pats:[/useless/i,/not\s*(happy|satisfied)\s*with/i,/not\s*(helpful|useful)/i,/not really.{0,20}helpful/i,/i\s*(quit|am leaving)/i,/already know/i,/we know this/i,/we already know/i,/too basic/i,/very basic/i,/nothing new/i,/not.*relevant.*to me/i,/not even relevant/i,/courses are not.*relevant/i,/needs?\s*more\s*detail/i,/more detailed/i,/things have to be more/i,/what is the actual catch/i,/not practical/i,/feels like compromising/i,/compromising personal data/i,/not worth/i,/pathetic/i,/terrible/i,/so boring/i,/waste.{0,12}(this|session|workshop)/i],hi:[/useless/i,/i quit/i,/not happy/i,/not relevant/i,/nothing new/i,/already know/i,/pathetic/i,/not worth/i,/terrible/i],reason:'Dissatisfied with workshop content quality or relevance'}
 ];
 
 /* ── HELPERS ── */
@@ -385,18 +410,11 @@ function parseAttendeeCSV(txt){
 /* ── SENTIMENT ANALYSIS ── */
 function parseChat(txt,src){
   var msgs=[],cur=null;
-  /* Supports both Zoom chat export formats:
-     1) "10:52:16 From Name to Recipient:"                (time only)
-     2) "2026-09-13 10:50:13 From Name to Recipient:"     (date + time) */
-  var re=/^(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{2}:\d{2}:\d{2})\s+From\s+(.+?)\s+to\s+(.+?):\s*$/;
   txt.split('\n').forEach(function(raw){
     var line=raw.replace(/\r$/,'');
-    var m=line.match(re);
-    if(m){if(cur)msgs.push(cur);cur={date:m[1]||'',ts:m[2],name:m[3].trim(),msg:'',source:src};}
-    else if(cur&&(line[0]==='\t'||line.slice(0,2)==='  ')){
-      var cont=line.replace(/^\s+/,'');
-      if(cont)cur.msg+=(cur.msg?' ':'')+cont;
-    }
+    var m=line.match(/^(\d{2}:\d{2}:\d{2}) From (.+?) to (.+?):\s*$/);
+    if(m){if(cur)msgs.push(cur);cur={ts:m[1],name:m[2].trim(),msg:'',source:src};}
+    else if(cur&&(line[0]==='\t'||line.slice(0,2)==='  '))cur.msg+=(cur.msg?' ':'')+line.replace(/^\s+/,'');
   });
   if(cur)msgs.push(cur);return msgs;
 }
@@ -599,11 +617,12 @@ function renderUpload(){
       '<div class="upload-card '+(S.csvFiles.length?'done':'')+'" id="cardCSV"><div class="icon-ring">&#128203;</div>'+csvTitle+csvHint+csvList+'<label class="pick-label" for="inputCSV">&#128194; Add .csv files</label></div>'+
     '</div>'+
     '<div class="ani d3"><button class="btn-run '+(canRun?'on':'')+'" id="btnRun">'+rl+'</button></div>'+
-    '<div class="detect-grid ani d4">'+
+    '<div class="detect-grid ani d4" style="grid-template-columns:repeat(5,1fr);max-width:780px">'+
+      '<div class="dc" style="border-color:rgba(255,78,205,.2)"><span class="di">&#128162;</span><div class="dcat" style="color:#ff4ecd">NEGATIVE</div><div class="dd">Abuse, gaali, fraud, ignored, overpriced, dissatisfaction</div></div>'+
       '<div class="dc c1"><span class="di">&#128218;</span><div class="dcat" style="color:#fb923c">CONTENT</div><div class="dd">Too basic, irrelevant or already known</div></div>'+
       '<div class="dc c2"><span class="di">&#127909;</span><div class="dcat" style="color:#60c0fa">RECORDING</div><div class="dd">Recording requests &amp; complaints</div></div>'+
       '<div class="dc c3"><span class="di">&#128176;</span><div class="dcat" style="color:#f87171">UPSELLING</div><div class="dd">Excessive promotion complaints</div></div>'+
-      '<div class="dc c4"><span class="di">&#128681;</span><div class="dcat" style="color:#ef4444">FLAG WORD</div><div class="dd">"scam", "waste", "fake", "fraud"</div></div>'+
+      '<div class="dc c4"><span class="di">&#128681;</span><div class="dcat" style="color:#ef4444">FLAG WORD</div><div class="dd">"waste", "fake", "cheat"</div></div>'+
     '</div>'+
     '<div class="priv ani d5">&#127807; Files never leave your device &middot; Zero data transmission &#127807;</div>'+
   '</div>';
@@ -619,23 +638,23 @@ function renderSentimentResults(){
   if(S.payPhase==='done') return renderUnifiedTable();
 
   var vis=visibleResults();
-  var cats={CONTENT:0,RECORDING:0,UPSELLING:0,FLAG_WORD:0};
+  var cats={NEGATIVE:0,CONTENT:0,RECORDING:0,UPSELLING:0,FLAG_WORD:0};
   S.results.forEach(function(r){if(cats[r.cat]!==undefined)cats[r.cat]++;});
   var hasCon=S.attendees.length>0,matchN=S.results.filter(function(r){return r.found;}).length;
   var totalMsgs=0;S.chatFiles.forEach(function(cf){totalMsgs+=cf.messages.length;});
   var srcChips=S.chatFiles.map(function(cf){return'<div class="src-chip">&#128172; <span>'+e(sn(cf.name))+'</span> &middot; '+cf.messages.length.toLocaleString()+' msgs</div>';}).join('')+S.csvFiles.map(function(cf){return'<div class="src-chip">&#128203; <span>'+e(sn(cf.name))+'</span> &middot; '+cf.attendees.length+' att.</div>';}).join('');
-  var sC={T:'#64748b',P:'#ef4444',C:'#fb923c',R:'#60c0fa',U:'#f87171',F:'#dc2626',M:'#3dba6f'};
-  var statsD=[{l:'TOTAL MESSAGES',v:totalMsgs.toLocaleString(),c:sC.T},{l:'UNIQUE PEOPLE',v:S.results.length,c:sC.P},{l:'CONTENT',v:cats.CONTENT,c:sC.C},{l:'RECORDING',v:cats.RECORDING,c:sC.R},{l:'UPSELLING',v:cats.UPSELLING,c:sC.U},{l:'FLAG WORD',v:cats.FLAG_WORD,c:sC.F}];
+  var sC={T:'#64748b',P:'#ef4444',N:'#ff4ecd',C:'#fb923c',R:'#60c0fa',U:'#f87171',F:'#dc2626',M:'#3dba6f'};
+  var statsD=[{l:'TOTAL MESSAGES',v:totalMsgs.toLocaleString(),c:sC.T},{l:'UNIQUE PEOPLE',v:S.results.length,c:sC.P},{l:'NEGATIVE',v:cats.NEGATIVE,c:sC.N},{l:'CONTENT',v:cats.CONTENT,c:sC.C},{l:'RECORDING',v:cats.RECORDING,c:sC.R},{l:'UPSELLING',v:cats.UPSELLING,c:sC.U},{l:'FLAG WORD',v:cats.FLAG_WORD,c:sC.F}];
   if(hasCon)statsD.push({l:'CONTACTS FOUND',v:matchN,c:sC.M});
   var statsHTML=statsD.map(function(s,i){return'<div class="stat" style="animation-delay:'+(i*.065)+'s"><div class="sv" style="color:'+s.c+'">'+s.v+'</div><div class="sl">'+s.l+'</div></div>';}).join('');
-  var fbtns=['ALL','CONTENT','RECORDING','UPSELLING','FLAG_WORD'].map(function(f){var lbl={ALL:'All',CONTENT:'&#128218; Content',RECORDING:'&#127909; Recording',UPSELLING:'&#128176; Upselling',FLAG_WORD:'&#128681; Flag Word'}[f];return'<button class="fb'+(S.filter===f?' on':'')+'" data-f="'+f+'">'+lbl+'</button>';}).join('');
+  var fbtns=['ALL','NEGATIVE','CONTENT','RECORDING','UPSELLING','FLAG_WORD'].map(function(f){var lbl={ALL:'All',NEGATIVE:'&#128162; Negative',CONTENT:'&#128218; Content',RECORDING:'&#127909; Recording',UPSELLING:'&#128176; Upselling',FLAG_WORD:'&#128681; Flag Word'}[f];return'<button class="fb'+(S.filter===f?' on':'')+'" data-f="'+f+'">'+lbl+'</button>';}).join('');
 
   // Unified columns: NAME | MESSAGE | EMAIL | PHONE | CATEGORY | SEV | REASON
   var hasCols=hasCon;
   var W=hasCols?['130px','minmax(140px,1fr)','145px','110px','95px','55px','minmax(110px,1fr)']:['140px','minmax(160px,1fr)','95px','55px','minmax(130px,1fr)'];
   var hc=hasCols?['NAME','MESSAGE','EMAIL','PHONE','CATEGORY','SEV','REASON']:['NAME','MESSAGE','CATEGORY','SEV','REASON'];
   var gt='display:grid;grid-template-columns:'+W.join(' ');
-  var CLBL={CONTENT:'&#128218; CONTENT',RECORDING:'&#127909; RECORDING',UPSELLING:'&#128176; UPSELLING',FLAG_WORD:'&#128681; FLAG WORD'};
+  var CLBL={NEGATIVE:'&#128162; NEGATIVE',CONTENT:'&#128218; CONTENT',RECORDING:'&#127909; RECORDING',UPSELLING:'&#128176; UPSELLING',FLAG_WORD:'&#128681; FLAG WORD'};
 
   var bodyHTML=vis.length===0?'<div class="empty"><div class="ee">&#127807;</div><div class="et">No flags for this filter</div></div>':vis.map(function(r,i){
     var sev=r.sev==='HIGH'?'<span class="sH">&#9650; HIGH</span>':'<span class="sM">&#9670; MED</span>';
@@ -666,7 +685,7 @@ function renderSentimentResults(){
 /* ── UNIFIED TABLE — shown after payment matching, merges everything ── */
 function renderUnifiedTable(){
   var vis=visiblePay();
-  var cats={CONTENT:0,RECORDING:0,UPSELLING:0,FLAG_WORD:0};
+  var cats={NEGATIVE:0,CONTENT:0,RECORDING:0,UPSELLING:0,FLAG_WORD:0};
   S.payResults.forEach(function(r){if(cats[r.cat]!==undefined)cats[r.cat]++;});
   var totalMsgs=0;S.chatFiles.forEach(function(cf){totalMsgs+=cf.messages.length;});
   var matched=S.payResults.filter(function(r){return r.payMatchHow!=='none';});
@@ -676,6 +695,7 @@ function renderUnifiedTable(){
   var statsD=[
     {l:'TOTAL MESSAGES',v:totalMsgs.toLocaleString(),c:'#64748b'},
     {l:'FLAGGED PEOPLE',v:S.payResults.length,c:'#ef4444'},
+    {l:'NEGATIVE',v:cats.NEGATIVE,c:'#ff4ecd'},
     {l:'CONTENT',v:cats.CONTENT,c:'#fb923c'},
     {l:'UPSELLING',v:cats.UPSELLING,c:'#f87171'},
     {l:'FLAG WORD',v:cats.FLAG_WORD,c:'#dc2626'},
@@ -684,14 +704,14 @@ function renderUnifiedTable(){
   ];
   var statsHTML=statsD.map(function(s,i){return'<div class="stat" style="animation-delay:'+(i*.06)+'s"><div class="sv" style="color:'+s.c+'">'+s.v+'</div><div class="sl">'+s.l+'</div></div>';}).join('');
 
-  var fbtns=['ALL','CONTENT','RECORDING','UPSELLING','FLAG_WORD'].map(function(f){var lbl={ALL:'All',CONTENT:'&#128218; Content',RECORDING:'&#127909; Recording',UPSELLING:'&#128176; Upselling',FLAG_WORD:'&#128681; Flag Word'}[f];return'<button class="fb'+(S.filter===f?' on':'')+'" data-f="'+f+'">'+lbl+'</button>';}).join('');
+  var fbtns=['ALL','NEGATIVE','CONTENT','RECORDING','UPSELLING','FLAG_WORD'].map(function(f){var lbl={ALL:'All',NEGATIVE:'&#128162; Negative',CONTENT:'&#128218; Content',RECORDING:'&#127909; Recording',UPSELLING:'&#128176; Upselling',FLAG_WORD:'&#128681; Flag Word'}[f];return'<button class="fb'+(S.filter===f?' on':'')+'" data-f="'+f+'">'+lbl+'</button>';}).join('');
   var pfbtns=[{v:'all',l:'All'},{v:'matched',l:'&#9989; Has Amount'},{v:'unmatched',l:'&#10008; No Amount'}].map(function(f){return'<button class="fb'+(S.payFilter===f.v?' on':'')+'" data-pf="'+f.v+'">'+f.l+'</button>';}).join('');
 
   // Single unified columns: NAME | MESSAGE | EMAIL | PHONE | CATEGORY | SEV | AMOUNT | MATCHED
   var W=['130px','minmax(130px,1fr)','148px','112px','88px','52px','110px','80px'];
   var hc=['NAME','MESSAGE','EMAIL','PHONE','CATEGORY','SEV','AMOUNT PAID','MATCH'];
   var gt='display:grid;grid-template-columns:'+W.join(' ');
-  var CLBL={CONTENT:'&#128218; CONTENT',RECORDING:'&#127909; RECORDING',UPSELLING:'&#128176; UPSELLING',FLAG_WORD:'&#128681; FLAG WORD'};
+  var CLBL={NEGATIVE:'&#128162; NEGATIVE',CONTENT:'&#128218; CONTENT',RECORDING:'&#127909; RECORDING',UPSELLING:'&#128176; UPSELLING',FLAG_WORD:'&#128681; FLAG WORD'};
 
   var bodyHTML=vis.length===0?'<div class="empty"><div class="ee">&#127807;</div><div class="et">No results for this filter</div></div>':vis.map(function(r,i){
     var sev=r.sev==='HIGH'?'<span class="sH">&#9650; HIGH</span>':'<span class="sM">&#9670; MED</span>';
